@@ -26,7 +26,7 @@ object DraftBuilder {
           None,
         ),
       )
-      def timer(name: String = null, duration: FiniteDuration = null)(using autoName: sourcecode.Name): WIO.Timer[Ctx, Any, Nothing, Nothing] =
+      def timer(name: String = null, duration: FiniteDuration = null)(using autoName: sourcecode.Name): WIO.Draft[Ctx] =
         WIO.Timer(
           Option(duration) match {
             case Some(value) => WIO.Timer.DurationSource.Static(value.toJava)
@@ -47,6 +47,13 @@ object DraftBuilder {
         ),
       )
 
+      def choice(name: String = null)(branches: (String, WIO.Draft[Ctx])*)(using autoName: sourcecode.Name): WIO.Draft[Ctx] = {
+        val branchWios = branches.map { case (branchName, wio) =>
+          WIO.Branch(_ => None, wio, Some(branchName))
+        }
+        WIO.Fork(branchWios.toVector, getEffectiveName(name, autoName).some, None)
+      }
+
       def forEach(forEach: WIO.Draft[Ctx], name: String = null)(using autoName: sourcecode.Name): WIO.Draft[Ctx] = {
         val effName = getEffectiveName(name, autoName).some
         WIO.ForEach(_ => ???, forEach, () => ???, null, _ => ???, (_, _, _) => ???, (_, _) => ???, None, null, WIOMeta.ForEach(effName))
@@ -61,6 +68,17 @@ object DraftBuilder {
           case None    => WIO.build[Ctx].repeat(body).until(_ => ???).onRestartContinue.named(conditionName, releaseBranchName, restartBranchName)
         }
         base.transformInput((_: Any) => ???).map(_ => ???)
+      }
+
+      def parallel(elements: WIO.Draft[Ctx]*): WIO.Draft[Ctx] = {
+        val parallelElements = elements.map { element =>
+          WIO.Parallel.Element(element.map(_ => ???), (interimState: WCState[Ctx], _: WCState[Ctx]) => interimState)
+        }
+        WIO.Parallel[Ctx, Any, Nothing, WCState[Ctx], WCState[Ctx]](
+          elements = parallelElements,
+          formResult = _ => ???,
+          initialInterimState = (_: Any) => ???
+        ).transformInput((_: Any) => ???).map(_ => ???)
       }
 
     }
